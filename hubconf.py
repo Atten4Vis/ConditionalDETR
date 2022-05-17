@@ -40,13 +40,13 @@ def conditional_detr_resnet50(pretrained=False, num_classes=91, return_postproce
     return model
 
 
-def detr_resnet50_dc5(pretrained=False, num_classes=91, return_postprocessor=False):
+def conditional_detr_resnet50_dc5(pretrained=False, num_classes=91, return_postprocessor=False):
     """
-    DETR-DC5 R50 with 6 encoder and 6 decoder layers.
+    ConditionalDETR-DC5 R50 with 6 encoder and 6 decoder layers.
 
-    The last block of ResNet-50 has dilation to increase
+    The last block of RessNet-50 has dilation to increase
     output resolution.
-    Achieves 43.3/63.1 AP/AP50 on COCO val5k.
+    Achieves 43. AP on COCO val5k.
     """
     model = _make_conditional_detr("resnet50", dilation=True, num_classes=num_classes)
     if pretrained:
@@ -59,11 +59,11 @@ def detr_resnet50_dc5(pretrained=False, num_classes=91, return_postprocessor=Fal
     return model
 
 
-def detr_resnet101(pretrained=False, num_classes=91, return_postprocessor=False):
+def conditional_detr_resnet101(pretrained=False, num_classes=91, return_postprocessor=False):
     """
-    DETR-DC5 R101 with 6 encoder and 6 decoder layers.
+    ConditionalDETR-DC5 R101 with 6 encoder and 6 decoder layers.
 
-    Achieves 43.5/63.8 AP/AP50 on COCO val5k.
+    Achieves 42.8 AP on COCO val5k.
     """
     model = _make_conditional_detr("resnet101", dilation=False, num_classes=num_classes)
     if pretrained:
@@ -76,13 +76,13 @@ def detr_resnet101(pretrained=False, num_classes=91, return_postprocessor=False)
     return model
 
 
-def detr_resnet101_dc5(pretrained=False, num_classes=91, return_postprocessor=False):
+def conditional_detr_resnet101_dc5(pretrained=False, num_classes=91, return_postprocessor=False):
     """
-    DETR-DC5 R101 with 6 encoder and 6 decoder layers.
+    ConditionalDETR-DC5 R101 with 6 encoder and 6 decoder layers.
 
     The last block of ResNet-101 has dilation to increase
     output resolution.
-    Achieves 44.9/64.7 AP/AP50 on COCO val5k.
+    Achieves 45.0 AP on COCO val5k.
     """
     model = _make_conditional_detr("resnet101", dilation=True, num_classes=num_classes)
     if pretrained:
