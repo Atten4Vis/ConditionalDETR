@@ -26,7 +26,7 @@ from typing import Tuple, Optional
 
 import torch
 from torch import Tensor
-if (float(torch.__version__.split('.')[0]) + 0.1 * float(torch.__version__.split('.')[1])) < 1.9:
+if float(torch.__version__.split('.')[1]) < 9:
     from torch.nn.modules.linear import _LinearWithBiass
 else:
     from torch.nn.modules.linear import NonDynamicallyQuantizableLinear as _LinearWithBias
