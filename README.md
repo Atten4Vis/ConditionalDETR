@@ -177,6 +177,11 @@ AP is computed on COCO 2017 *val*.
   </tbody>
 </table>
 
+The models are also available via torch hub, to load conditional DETR R50 with pretrained weights simply do:
+```python
+model = torch.hub.load('Atten4Vis/ConditionalDETR:main', 'conditional_detr_resnet50', pretrained=True)
+```
+
 Note: 
 1. The numbers in the table are slightly differently
    from the numbers in the paper. We re-ran some experiments when releasing the codes.
