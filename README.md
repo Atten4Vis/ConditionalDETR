@@ -293,7 +293,7 @@ Conditional DETR is released under the Apache 2.0 license. Please see the [LICEN
 
 ```bibtex
 @article{chen2022group,
-  title={Group DETR: Fast Training Convergence with Decoupled One-to-Many Label Assignment},
+  title={Group DETR: Fast DETR Training with Group-Wise One-to-Many Assignment},
   author={Chen, Qiang and Chen, Xiaokang and Wang, Jian and Feng, Haocheng and Han, Junyu and Ding, Errui and Zeng, Gang and Wang, Jingdong},
   journal={arXiv preprint arXiv:2207.13085},
   year={2022}
