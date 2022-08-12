@@ -1,6 +1,8 @@
-# Conditional DETR
+# Conditional DETR + Group DETR
 
 This repository is an official implementation of the ICCV 2021 paper "[Conditional DETR for Fast Training Convergence](https://arxiv.org/abs/2108.06152)". 
+
+We also support [Group DETR: Fast DETR Training with Group-Wise One-to-Many Assignment](https://arxiv.org/pdf/2207.13085.pdf). To run with 11 groups, just set `--group_detr 11`. Please note that there is **no extra computational cost during inference** when compared to original Conditional DETR.
 
 ## Introduction
 
@@ -286,5 +288,14 @@ Conditional DETR is released under the Apache 2.0 license. Please see the [LICEN
   author      = {Meng, Depu and Chen, Xiaokang and Fan, Zejia and Zeng, Gang and Li, Houqiang and Yuan, Yuhui and Sun, Lei and Wang, Jingdong},
   booktitle   = {Proceedings of the IEEE International Conference on Computer Vision (ICCV)},
   year        = {2021}
+}
+```
+
+```bibtex
+@article{chen2022group,
+  title={Group DETR: Fast Training Convergence with Decoupled One-to-Many Label Assignment},
+  author={Chen, Qiang and Chen, Xiaokang and Wang, Jian and Feng, Haocheng and Han, Junyu and Ding, Errui and Zeng, Gang and Wang, Jingdong},
+  journal={arXiv preprint arXiv:2207.13085},
+  year={2022}
 }
 ```

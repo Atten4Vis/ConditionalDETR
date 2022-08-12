@@ -62,6 +62,8 @@ def get_args_parser():
                         help="Number of attention heads inside the transformer's attentions")
     parser.add_argument('--num_queries', default=300, type=int,
                         help="Number of query slots")
+    parser.add_argument('--group_detr', default=1, type=int,
+                        help="Number of groups to speed up detr training")
     parser.add_argument('--pre_norm', action='store_true')
 
     # * Segmentation

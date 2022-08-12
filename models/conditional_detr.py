@@ -29,7 +29,7 @@ from .transformer import build_transformer
 
 class ConditionalDETR(nn.Module):
     """ This is the Conditional DETR module that performs object detection """
-    def __init__(self, backbone, transformer, num_classes, num_queries, aux_loss=False):
+    def __init__(self, backbone, transformer, num_classes, num_queries, aux_loss=False, group_detr=1):
         """ Initializes the model.
         Parameters:
             backbone: torch module of the backbone to be used. See backbone.py
@@ -38,6 +38,7 @@ class ConditionalDETR(nn.Module):
             num_queries: number of object queries, ie detection slot. This is the maximal number of objects
                          Conditional DETR can detect in a single image. For COCO, we recommend 100 queries.
             aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
+            group_detr: Number of groups to speed detr training. Default is 1.
         """
         super().__init__()
         self.num_queries = num_queries
@@ -45,10 +46,11 @@ class ConditionalDETR(nn.Module):
         hidden_dim = transformer.d_model
         self.class_embed = nn.Linear(hidden_dim, num_classes)
         self.bbox_embed = MLP(hidden_dim, hidden_dim, 4, 3)
-        self.query_embed = nn.Embedding(num_queries, hidden_dim)
+        self.query_embed = nn.Embedding(num_queries * group_detr, hidden_dim)
         self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
         self.backbone = backbone
         self.aux_loss = aux_loss
+        self.group_detr = group_detr
 
         # init prior_prob setting for focal loss
         prior_prob = 0.01
@@ -80,7 +82,12 @@ class ConditionalDETR(nn.Module):
 
         src, mask = features[-1].decompose()
         assert mask is not None
-        hs, reference = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])
+        if self.training:
+            query_embed_weight = self.query_embed.weight
+        else:
+            # only use one group in inference
+            query_embed_weight = self.query_embed.weight[:self.num_queries]
+        hs, reference = self.transformer(self.input_proj(src), mask, query_embed_weight, pos[-1])
         
         reference_before_sigmoid = inverse_sigmoid(reference)
         outputs_coords = []
@@ -112,7 +119,7 @@ class SetCriterion(nn.Module):
         1) we compute hungarian assignment between ground truth boxes and the outputs of the model
         2) we supervise each pair of matched ground-truth / prediction (supervise class and box)
     """
-    def __init__(self, num_classes, matcher, weight_dict, focal_alpha, losses):
+    def __init__(self, num_classes, matcher, weight_dict, focal_alpha, losses, group_detr=1):
         """ Create the criterion.
         Parameters:
             num_classes: number of object categories, omitting the special no-object category
@@ -120,6 +127,7 @@ class SetCriterion(nn.Module):
             weight_dict: dict containing as key the names of the losses and as values their relative weight.
             losses: list of all the losses to be applied. See get_loss for list of available losses.
             focal_alpha: alpha in Focal Loss
+            group_detr: Number of groups to speed detr training. Default is 1.
         """
         super().__init__()
         self.num_classes = num_classes
@@ -127,6 +135,7 @@ class SetCriterion(nn.Module):
         self.weight_dict = weight_dict
         self.losses = losses
         self.focal_alpha = focal_alpha
+        self.group_detr = group_detr
         
 
     def loss_labels(self, outputs, targets, indices, num_boxes, log=True):
@@ -248,13 +257,14 @@ class SetCriterion(nn.Module):
              targets: list of dicts, such that len(targets) == batch_size.
                       The expected keys in each dict depends on the losses applied, see each loss' doc
         """
+        group_detr = self.group_detr if self.training else 1
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
 
         # Retrieve the matching between the outputs of the last layer and the targets
-        indices = self.matcher(outputs_without_aux, targets)
+        indices = self.matcher(outputs_without_aux, targets, group_detr=group_detr)
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
-        num_boxes = sum(len(t["labels"]) for t in targets)
+        num_boxes = sum(len(t["labels"]) for t in targets) * group_detr
         num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
         if is_dist_avail_and_initialized():
             torch.distributed.all_reduce(num_boxes)
@@ -268,7 +278,7 @@ class SetCriterion(nn.Module):
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if 'aux_outputs' in outputs:
             for i, aux_outputs in enumerate(outputs['aux_outputs']):
-                indices = self.matcher(aux_outputs, targets)
+                indices = self.matcher(aux_outputs, targets, group_detr=group_detr)
                 for loss in self.losses:
                     if loss == 'masks':
                         # Intermediate masks losses are too costly to compute, we ignore them.
@@ -359,6 +369,7 @@ def build(args):
         num_classes=num_classes,
         num_queries=args.num_queries,
         aux_loss=args.aux_loss,
+        group_detr=args.group_detr
     )
     if args.masks:
         model = DETRsegm(model, freeze_detr=(args.frozen_weights is not None))
@@ -379,7 +390,7 @@ def build(args):
     if args.masks:
         losses += ["masks"]
     criterion = SetCriterion(num_classes, matcher=matcher, weight_dict=weight_dict,
-                             focal_alpha=args.focal_alpha, losses=losses)
+                             focal_alpha=args.focal_alpha, losses=losses, group_detr=args.group_detr)
     criterion.to(device)
     postprocessors = {'bbox': PostProcess()}
     if args.masks:

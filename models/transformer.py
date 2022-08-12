@@ -50,7 +50,7 @@ class Transformer(nn.Module):
     def __init__(self, d_model=512, nhead=8, num_queries=300, num_encoder_layers=6,
                  num_decoder_layers=6, dim_feedforward=2048, dropout=0.1,
                  activation="relu", normalize_before=False,
-                 return_intermediate_dec=False):
+                 return_intermediate_dec=False, group_detr=1):
         super().__init__()
 
         encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward,
@@ -59,7 +59,8 @@ class Transformer(nn.Module):
         self.encoder = TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
 
         decoder_layer = TransformerDecoderLayer(d_model, nhead, dim_feedforward,
-                                                dropout, activation, normalize_before)
+                                                dropout, activation, normalize_before, 
+                                                group_detr=group_detr)
         decoder_norm = nn.LayerNorm(d_model)
         self.decoder = TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm,
                                           return_intermediate=return_intermediate_dec,
@@ -238,7 +239,7 @@ class TransformerEncoderLayer(nn.Module):
 class TransformerDecoderLayer(nn.Module):
 
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
-                 activation="relu", normalize_before=False):
+                 activation="relu", normalize_before=False, group_detr=1):
         super().__init__()
         # Decoder Self-Attention
         self.sa_qcontent_proj = nn.Linear(d_model, d_model)
@@ -273,6 +274,7 @@ class TransformerDecoderLayer(nn.Module):
 
         self.activation = _get_activation_fn(activation)
         self.normalize_before = normalize_before
+        self.group_detr = group_detr
 
     def with_pos_embed(self, tensor, pos: Optional[Tensor]):
         return tensor if pos is None else tensor + pos
@@ -302,8 +304,17 @@ class TransformerDecoderLayer(nn.Module):
         q = q_content + q_pos
         k = k_content + k_pos
 
+        if self.training:
+            q = torch.cat(q.split(num_queries // self.group_detr, dim=0), dim=1)
+            k = torch.cat(k.split(num_queries // self.group_detr, dim=0), dim=1)
+            v = torch.cat(v.split(num_queries // self.group_detr, dim=0), dim=1)
+            
+
         tgt2 = self.self_attn(q, k, value=v, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
+        
+        if self.training:
+            tgt2 = torch.cat(tgt2.split(bs, dim=1), dim=0)
         # ========== End of Self-Attention =============
 
         tgt = tgt + self.dropout1(tgt2)
@@ -407,6 +418,7 @@ def build_transformer(args):
         num_decoder_layers=args.dec_layers,
         normalize_before=args.pre_norm,
         return_intermediate_dec=True,
+        group_detr=args.group_detr
     )
 
 
