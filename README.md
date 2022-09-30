@@ -2,9 +2,9 @@
 
 This repository is an official implementation of the ICCV 2021 paper "[Conditional DETR for Fast Training Convergence](https://arxiv.org/abs/2108.06152)". 
 
+* Conditional DETR is integrated in [Huggingface](https://huggingface.co/docs/transformers/main/en/model_doc/conditional_detr), try out our model [here](https://huggingface.co/microsoft/conditional-detr-resnet-50). 
+
 ## Introduction
-
-
 
 The DETR approach applies the
 transformer encoder and decoder architecture to object detection
